@@ -1,39 +1,38 @@
 import cv2
 from ultralytics import YOLO
 
-# Carga el modelo básico de YOLO (descargará un archivo pequeño la primera vez)
-model = YOLO('yolov8n.pt')
+# Carga tu nuevo modelo (fíjate que la ruta ahora dice train-9)
+model = YOLO(r'C:\Users\Juan\Desktop\Movimiento de banda\runs\detect\train-10\weights\best.pt')
+# Inicia la conexión con tu cámara web externa
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 
-# Inicia la conexión con tu cámara web. 
-# Si tienes una laptop, '0' suele ser la cámara integrada. Si usas una externa, intenta con '1'.
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+# Solicitar resolución 1080p (Full HD)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
 if not cap.isOpened():
     print("Error: No se pudo conectar a la cámara web.")
     exit()
 
-print("Cámara encendida. Presiona la tecla 'q' sobre la ventana de video para apagarla.")
+print("Cámara encendida. Presiona la tecla 'q' sobre la ventana de video para apagarla")
 
 while True:
-    # Captura cuadro por cuadro
     ret, frame = cap.read()
     if not ret:
-        print("Se perdió la señal de video.")   
+        print("Error al leer el fotograma.")
         break
 
-    # Pasa la imagen por la inteligencia artificial
-    resultados = model(frame)
+    # Realizar la inferencia ajustando la confianza mínima a 25% para forzar la detección
+    results = model(frame, conf=0.25)
+    
+    # Visualizar los resultados en tiempo real con las etiquetas
+    annotated_frame = results[0].plot()
 
-    # Dibuja las cajas delimitadoras sobre los objetos que encuentre
-    imagen_anotada = resultados[0].plot()
+    cv2.imshow("Deteccion de Componentes en Linea de Ensamblaje", annotated_frame)
 
-    # Muestra el resultado en una ventana flotante
-    cv2.imshow('Prueba Visión Artificial - YOLO', imagen_anotada)
-
-    # Espera a que presiones 'q' para romper el ciclo
+    # Salir al presionar la tecla 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# Apaga la cámara y cierra la ventana
 cap.release()
 cv2.destroyAllWindows()

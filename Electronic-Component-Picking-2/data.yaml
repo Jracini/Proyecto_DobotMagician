@@ -1,0 +1,17 @@
+names:
+- Capacitor
+- Diodo
+- ESP32
+- Resistencia
+- Transistor
+- capacitor ceramico
+nc: 6
+roboflow:
+  license: Private
+  project: electronic-component-picking
+  url: https://app.roboflow.com/customcomponentesdetectoryolo11/electronic-component-picking/2
+  version: 2
+  workspace: customcomponentesdetectoryolo11
+test: ../test/images
+train: ../train/images
+val: ../valid/images
