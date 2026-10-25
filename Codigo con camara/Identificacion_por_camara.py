@@ -2,9 +2,9 @@ import cv2
 from ultralytics import YOLO
 
 # Carga tu nuevo modelo (fíjate que la ruta ahora dice train-9)
-model = YOLO(r'C:\Users\Juan\Desktop\Movimiento de banda\runs\detect\train-10\weights\best.pt')
+model = YOLO(r'C:\Users\Juan\Desktop\Proyectos de Python\Proyecto_DobotMagician\runs\detect\train-10\weights\best.pt')
 # Inicia la conexión con tu cámara web externa
-cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 # Solicitar resolución 1080p (Full HD)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -23,7 +23,7 @@ while True:
         break
 
     # Realizar la inferencia ajustando la confianza mínima a 25% para forzar la detección
-    results = model(frame, conf=0.25)
+    results = model(frame, imgsz=1280, conf=0.20)
     
     # Visualizar los resultados en tiempo real con las etiquetas
     annotated_frame = results[0].plot()
