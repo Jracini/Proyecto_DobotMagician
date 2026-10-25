@@ -155,8 +155,9 @@ Este script conecta con el Dobot, enciende la banda (`SetEMotor`), mueve el braz
 
 | Integrante | GitHub |
 |---|---|
-| Juan Racini | [@Jracini](https://github.com/Jracini) |
-| _Agrega aquí a los demás integrantes_ | |
+| Juan Racini  | 
+| Leonard Diaz | 
+| Mike Salas   |
 
 ---
 
