@@ -1,46 +1,69 @@
-import DobotDllType as dType
 import time
+import struct
+from serial.tools import list_ports
+from pydobot import Dobot
+from pydobot.message import Message
 
-# Cargar la librería del Dobot
-api = dType.load()
 
-# Conectar al Dobot (Reemplaza "COM3" por tu puerto)
-puerto_dobot = "COM3"
-estado_conexion = dType.ConnectDobot(api, puerto_dobot, 115200)[0]
+def detectar_puerto_dobot():
+    """
+    Busca automáticamente el puerto USB del Dobot
+    (el brazo usa el chip Silicon Labs CP210x USB to UART).
+    """
+    for puerto in list_ports.comports():
+        descripcion = (puerto.description or '').upper()
+        hwid = puerto.hwid or ''
+        if 'CP210' in descripcion or '10C4:EA60' in hwid:
+            return puerto.device
+    return None
 
-if estado_conexion == dType.DobotConnect.DobotConnect_NoError:
-    print("Conexión exitosa. Iniciando movimiento simultáneo...")
-    
-    # Limpiar cualquier comando previo en cola
-    dType.SetQueuedCmdClear(api)
-    
-    # 1. Configurar velocidad de la banda transportadora
-    # Parámetros SetEMotor: api, puerto (0 o 1), habilitar (1), velocidad (pulsos/s), isQueued (0 = ejecución inmediata)
-    puerto_motor_banda = 0
-    velocidad_banda = 15000 
-    
-    # 2. Iniciar el movimiento de la banda (arranca de inmediato)
-    dType.SetEMotor(api, puerto_motor_banda, 1, velocidad_banda, 0)
-    
-    # 3. Iniciar el movimiento del brazo (arranca de inmediato)
-    # El brazo se moverá hacia la coordenada X=250, Y=0, Z=50 mientras la banda está girando
-    dType.SetPTPCmd(api, dType.PTPMode.PTPMOVLXYZMode, 250, 0, 50, 0, isQueued=0)
-    
-    # Dejar que ambos se muevan simultáneamente durante 4 segundos
-    print("Banda y brazo moviéndose al tiempo...")
-    time.sleep(4)
-    
-    # 4. Detener la banda transportadora
-    print("Deteniendo sistema...")
-    dType.SetEMotor(api, puerto_motor_banda, 0, 0, 0)
-    
-    # Opcional: Volver el brazo a la posición Home
-    dType.SetPTPCmd(api, dType.PTPMode.PTPMOVLXYZMode, 200, 0, 150, 0, isQueued=0)
-    time.sleep(2) # Esperar a que llegue a Home
-    
-    # Desconectar de forma segura
-    dType.DisconnectDobot(api)
-    print("Prueba finalizada y Dobot desconectado.")
 
-else:
-    print("Error de conexión. Verifica el puerto COM.")
+def mover_banda(dispositivo, velocidad, puerto_stepper=0):
+    """
+    Controla la banda transportadora conectada al stepper del Dobot.
+    Equivale a SetEMotor() del SDK oficial (DobotDllType), que ya no está
+    disponible en el proyecto.
+    """
+    estado = 1 if velocidad != 0 else 0
+    msg = Message()
+    msg.id = 135 # ID del comando EMotor
+    msg.ctrl = 0x01 # Ejecución inmediata con respuesta (equivale a isQueued=0)
+    msg.params = bytearray(struct.pack('<BBi', puerto_stepper, estado, int(velocidad)))
+    dispositivo._send_command(msg)
+
+
+puerto = detectar_puerto_dobot()
+if puerto is None:
+    print("No se encontró el Dobot (chip CP210x). Conéctalo por USB y verifica el driver.")
+    exit()
+
+print(f"Conexión exitosa en {puerto}. Iniciando movimiento simultáneo...")
+device = Dobot(port=puerto, verbose=False)
+
+# 1. Configurar velocidad de la banda transportadora
+puerto_motor_banda = 0 # 0 = Stepper 1
+velocidad_banda = 15000
+
+# 2. Iniciar el movimiento de la banda (arranca de inmediato)
+mover_banda(device, velocidad_banda, puerto_motor_banda)
+
+# 3. Iniciar el movimiento del brazo (arranca de inmediato)
+# El brazo se moverá hacia la coordenada X=250, Y=0, Z=50 mientras la banda está girando
+# move_to sin wait es el equivalente de SetPTPCmd(PTPMOVLXYZMode, ..., isQueued=0)
+device.move_to(250, 0, 50, 0)
+
+# Dejar que ambos se muevan simultáneamente durante 4 segundos
+print("Banda y brazo moviéndose al tiempo...")
+time.sleep(4)
+
+# 4. Detener la banda transportadora
+print("Deteniendo sistema...")
+mover_banda(device, 0, puerto_motor_banda)
+
+# Volver el brazo a la posición Home
+device.move_to(200, 0, 150, 0)
+time.sleep(2) # Esperar a que llegue a Home
+
+# Desconectar de forma segura
+device.close()
+print("Prueba finalizada y Dobot desconectado.")
