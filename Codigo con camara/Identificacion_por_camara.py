@@ -4,11 +4,11 @@ from ultralytics import YOLO
 # Carga tu nuevo modelo (fíjate que la ruta ahora dice train-9)
 model = YOLO(r'C:\Users\Juan\Desktop\Proyectos de Python\Proyecto_DobotMagician\best_version121126.pt')
 # Inicia la conexión con tu cámara web externa
-cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 # Solicitar resolución 1080p (Full HD)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 if not cap.isOpened():
     print("Error: No se pudo conectar a la cámara web.")
