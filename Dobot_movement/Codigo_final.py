@@ -132,47 +132,34 @@ MAX_SALTO_PX = 150       # Máx. píxeles que un objeto puede avanzar entre foto
 FRAMES_OLVIDO = 10       # Fotogramas sin ver objetos antes de olvidar las posiciones anteriores
 PAUSA_ESTABILIZAR = 0.5  # Segundos que se leen fotogramas tras cada ciclo para vaciar los viejos
 
-# Alturas
-Z_SEGURA = 30.0          # Altura de desplazamiento (sin tocar nada)
-Z_GRAB_BASE = -20.0      # Altura de agarre que se usaba sin garra
-OFFSET_GARRA = 50.0      # La garra alarga la herramienta: ~5 cm más abajo al agarrar
-Z_GRAB = Z_GRAB_BASE - OFFSET_GARRA   # = -70
-Z_DROP = 20.0            # Al soltar sobre la banda queda casi a la altura segura
+# Secuencia de puntos tomada de DobotStudio (todos MOVJ). Formato: (X, Y, Z, R)
+P1_AGARRE  = (174.5221,  -6.6147, -17.6201,  -2.1706)   # 1) Agarra el objeto de la banda
+P2_LEVANTA = (192.0677, -12.1730,  51.1436,  -3.6265)   # 2) Lo levanta
+P3_SUELTA  = ( 32.2936, 248.2480, -81.7598,  82.5882)   # 3) Gira, baja y suelta
+P4_LEVANTA = ( 29.4289, 208.8525,  18.0578,  81.9794)   # 4) Levanta
+P5_INICIAL = (177.0792, -24.7849,  -9.1277,  -7.9676)   # 5) Vuelve a la posición inicial (espera)
 
 # Movimiento
-R_ANGLE = 0.0
 VELOCIDAD = 200          # Velocidad del brazo (si salta alarma o es brusco, bájala)
 ACELERACION = 200        # Aceleración del brazo
 PAUSA_CERRAR = 1.0       # Espera para que la bomba genere el agarre
 PAUSA_ABRIR = 1.0        # Espera para que el aire invertido suelte el objeto
 
-# Posición de seguridad / soltar (frente al robot, ángulo 0°)
-SEGURA = (210.0, 0.0)
-# Punto de agarre, a la izquierda. Más ángulo = más a la izquierda.
-RADIO_AGARRE = 210.0     # Distancia a la base (mm)
-ANGULO_AGARRE = 80.0     # Grados a la izquierda desde el frente (el límite de la base es ~90)
-AGARRE = (RADIO_AGARRE * math.cos(math.radians(ANGULO_AGARRE)),
-          RADIO_AGARRE * math.sin(math.radians(ANGULO_AGARRE)))
-
 
 # ==================================================
 # FUNCIONES DE MOVIMIENTO
 # ==================================================
-def ir_a(device, punto, z):
-    """Mueve el brazo a (x, y) a la altura z y espera a que termine."""
-    device.move_to(x=punto[0], y=punto[1], z=z, r=R_ANGLE, wait=True)
-
-
-def girar_a(device, punto, z):
+def mover_j(device, punto):
     """
-    Gira la base hacia (x, y) a la altura z moviendo por ARTICULACIONES (MOVJ).
-    Como el radio y la altura no cambian, solo gira la base: el brazo recorre un
-    arco y NO pasa cerca de la base, que era lo que lo llevaba a la alarma.
+    Mueve el brazo al punto (X, Y, Z, R) por ARTICULACIONES (MOVJ), igual que en
+    DobotStudio, y espera a que termine. Si la versión de pydobot no trae PTPMode,
+    usa movimiento lineal como respaldo.
     """
+    x, y, z, r = punto
     if PTPMode is None:
-        ir_a(device, punto, z)
+        device.move_to(x=x, y=y, z=z, r=r, wait=True)
         return
-    device._set_ptp_cmd(punto[0], punto[1], z, R_ANGLE, mode=PTPMode.MOVJ_XYZ, wait=True)
+    device._set_ptp_cmd(x, y, z, r, mode=PTPMode.MOVJ_XYZ, wait=True)
 
 
 def intentar(accion, descripcion):
@@ -307,33 +294,27 @@ def estabilizar_tras_ciclo(cap, model):
 
 def ciclo_agarre(device):
     """
-    El brazo espera sobre la banda (AGARRE a Z_SEGURA). Al detectar el objeto:
-    baja, lo agarra, sube, GIRA a SEGURA para soltarlo y vuelve a girar a AGARRE a esperar.
+    Secuencia con los puntos de DobotStudio. Parte y termina en P5 (posición inicial).
+    P1 agarra -> P2 levanta -> P3 gira, baja y suelta -> P4 levanta -> P5 vuelve a la inicial.
     """
-    # Ya está sobre el objeto: solo baja para agarrar y cierra la garra
-    print("   Bajando al objeto...")
-    ir_a(device, AGARRE, Z_GRAB)
+    print("   P1: bajando al objeto...")
+    mover_j(device, P1_AGARRE)
     print("   Cerrando la garra (agarre)...")
     cerrar_garra(device)
 
-    # Subir con el objeto
-    print("   Subiendo...")
-    ir_a(device, AGARRE, Z_SEGURA)
+    print("   P2: levantando el objeto...")
+    mover_j(device, P2_LEVANTA)
 
-    # Girar a la posición de soltar
-    print("   Girando para soltar...")
-    girar_a(device, SEGURA, Z_SEGURA)
-
-    # Bajar y soltar (la bomba invierte el aire)
-    print("   Bajando para soltar...")
-    ir_a(device, SEGURA, Z_DROP)
+    print("   P3: girando, bajando y soltando...")
+    mover_j(device, P3_SUELTA)
     print("   Abriendo la garra (soltando)...")
     abrir_garra(device)
 
-    # Subir y volver a girar a la posición de espera sobre la banda
-    ir_a(device, SEGURA, Z_SEGURA)
-    print("   Volviendo a la posición de espera sobre la banda...")
-    girar_a(device, AGARRE, Z_SEGURA)
+    print("   P4: levantando...")
+    mover_j(device, P4_LEVANTA)
+
+    print("   P5: volviendo a la posición inicial...")
+    mover_j(device, P5_INICIAL)
 
 
 # ==================================================
@@ -352,7 +333,7 @@ try:
     time.sleep(2)
 
     device.speed(VELOCIDAD, ACELERACION)
-    print(f"Punto de agarre: X={AGARRE[0]:.1f}  Y={AGARRE[1]:.1f}  Z={Z_GRAB:.1f}")
+    print(f"Punto de agarre (P1): X={P1_AGARRE[0]:.1f}  Y={P1_AGARRE[1]:.1f}  Z={P1_AGARRE[2]:.1f}")
 
     # Cargar el modelo YOLO (la cámara se abre más abajo, justo antes del ciclo)
     model = YOLO(RUTA_MODELO)
@@ -360,10 +341,8 @@ try:
     # Garra abierta (grip(False) invierte el aire) y posición de seguridad
     print("Abriendo la garra...")
     abrir_garra(device)
-    print("Posición de seguridad...")
-    ir_a(device, SEGURA, Z_SEGURA)
-    print("Posición de espera sobre la banda...")
-    girar_a(device, AGARRE, Z_SEGURA)   # El brazo se queda aquí esperando el objeto
+    print("Posición inicial (P5)...")
+    mover_j(device, P5_INICIAL)   # El brazo se queda aquí esperando el objeto
 
     # Encender la cámara AHORA (después de mover el Dobot), con reintentos
     cap = abrir_camara()
