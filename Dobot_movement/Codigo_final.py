@@ -110,8 +110,8 @@ def apagar_bomba(dispositivo):
 
 # Banda transportadora
 PUERTO_MOTOR_BANDA = 0   # 0 = Stepper 1
-VELOCIDAD_BANDA = 15000  # Si la banda gira al revés, usa un valor negativo
-RETARDO_PARADA = 0.0     # Segundos entre que el objeto cruza la línea y se para la banda
+VELOCIDAD_BANDA = 10000  # Si la banda gira al revés, usa un valor negativo
+RETARDO_PARADA = 0.5     # Segundos entre que el objeto cruza la línea y se para la banda
                          # (AJUSTA ESTE VALOR para que el objeto quede justo bajo el Dobot)
 MAX_OBJETOS = None       # Cantidad de objetos a procesar (None = hasta Ctrl+C o tecla 'q')
 
@@ -132,12 +132,12 @@ MAX_SALTO_PX = 150       # Máx. píxeles que un objeto puede avanzar entre foto
 FRAMES_OLVIDO = 10       # Fotogramas sin ver objetos antes de olvidar las posiciones anteriores
 PAUSA_ESTABILIZAR = 0.5  # Segundos que se leen fotogramas tras cada ciclo para vaciar los viejos
 
-# Secuencia de puntos tomada de DobotStudio (todos MOVJ). Formato: (X, Y, Z, R)
-P1_AGARRE  = (174.5221,  -6.6147, -17.6201,  -2.1706)   # 1) Agarra el objeto de la banda
-P2_LEVANTA = (192.0677, -12.1730,  51.1436,  -3.6265)   # 2) Lo levanta
-P3_SUELTA  = ( 32.2936, 248.2480, -81.7598,  82.5882)   # 3) Gira, baja y suelta
-P4_LEVANTA = ( 29.4289, 208.8525,  18.0578,  81.9794)   # 4) Levanta
-P5_INICIAL = (177.0792, -24.7849,  -9.1277,  -7.9676)   # 5) Vuelve a la posición inicial (espera)
+# Secuencia de puntos tomada de DobotStudio, adaptada a la garra (todos MOVJ). Formato: (X, Y, Z, R)
+P1_AGARRE  = (224, -37,  21,  -9)   # 1) Agarra el objeto de la banda
+P2_LEVANTA = (216, -27, 111,  -7)   # 2) Lo levanta
+P3_SUELTA  = ( 29, 254, -31,  83)   # 3) Gira, baja y suelta
+P4_LEVANTA = ( 17, 195,  27,  85)   # 4) Levanta
+P5_INICIAL = (233, -20,  40,  -5)   # 5) Vuelve a la posición inicial (espera)
 
 # Movimiento
 VELOCIDAD = 200          # Velocidad del brazo (si salta alarma o es brusco, bájala)
